@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
+import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
 
 export default function Home() {
   const [code, setCode] = useState("");
@@ -12,118 +13,88 @@ export default function Home() {
     setLoading(true);
     setReview("");
 
-    // 🔥 가짜 데이터 (UI 테스트용)
-    setTimeout(() => {
-      setReview(`[Issues]
-- No input validation
-- Function lacks error handling
+    const res = await fetch("/api/review", {
+      method: "POST",
+      body: JSON.stringify({ code }),
+    });
 
-[Improvements]
-- Add type checking
-- Handle invalid inputs
+    const data = await res.json();
 
-[Refactored Code]
-function add(a, b) {
-  if (typeof a !== "number" || typeof b !== "number") {
-    return "Invalid input";
-  }
-  return a + b;
-}`);
-      setLoading(false);
-    }, 1200);
+    setReview(data.review);
+    setLoading(false);
   };
 
-  // 🔥 리뷰 파싱
-  const formatReview = (text: string) => {
-    const issuesPart = text.split("[Improvements]")[0];
-    const improvementsPart = text.split("[Improvements]")[1] || "";
-
-    const issues = issuesPart.replace("[Issues]", "").trim();
-    const improvements = improvementsPart
-      .replace("[Refactored Code]", "")
-      .trim();
-
-    return { issues, improvements };
+  const copyToClipboard = () => {
+    navigator.clipboard.writeText(review);
   };
-
-  const { issues, improvements } = formatReview(review);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-100 to-gray-200 p-10">
-      
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 to-black text-white p-10">
+
+      {/* 제목 */}
       <h1 className="text-4xl font-bold text-center mb-10">
-        🚀 AI Code Review
+        💻 AI Code Review
       </h1>
 
-      <div className="grid grid-cols-2 gap-8 max-w-6xl mx-auto">
+      <div className="grid grid-cols-2 gap-6">
 
-        {/* LEFT - Code Input */}
-        <div className="bg-white p-6 rounded-2xl shadow-lg hover:shadow-xl transition">
-          <h2 className="font-semibold mb-4 text-lg">💻 Code Input</h2>
+        {/* 입력 */}
+        <div className="bg-gray-800 p-6 rounded-2xl shadow-lg">
+          <h2 className="mb-4 text-lg font-semibold">Code Input</h2>
 
           <textarea
-            className="w-full h-80 border rounded-lg p-3 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-black"
-            placeholder="Paste your code here..."
+            className="w-full h-80 p-4 bg-black text-green-400 rounded-lg font-mono outline-none"
+            placeholder="코드를 입력하세요..."
             value={code}
             onChange={(e) => setCode(e.target.value)}
           />
 
           <button
             onClick={handleReview}
-            className="mt-4 w-full bg-black text-white py-3 rounded-lg hover:bg-gray-800 transition font-semibold"
+            className="w-full mt-4 bg-blue-600 py-3 rounded-lg hover:bg-blue-700 transition"
           >
             {loading ? "Analyzing..." : "Review Code"}
           </button>
         </div>
 
-        {/* RIGHT - AI Review */}
-        <div className="bg-white p-6 rounded-2xl shadow-lg hover:shadow-xl transition">
-          <h2 className="font-semibold mb-4 text-lg">🤖 AI Review</h2>
+        {/* 결과 */}
+        <div className="bg-gray-800 p-6 rounded-2xl shadow-lg flex flex-col">
+
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-lg font-semibold">AI Review</h2>
+
+            {review && (
+              <button
+                onClick={copyToClipboard}
+                className="text-sm bg-gray-700 px-3 py-1 rounded hover:bg-gray-600"
+              >
+                Copy
+              </button>
+            )}
+          </div>
 
           {loading ? (
-            <div className="animate-pulse text-gray-400">
-              Analyzing your code...
+            <div className="text-gray-400 animate-pulse">
+              AI is analyzing your code...
             </div>
           ) : review ? (
-            <div className="space-y-4">
-
-              {/* Issues */}
-              <div className="bg-red-50 p-4 rounded-lg">
-                <h3 className="font-semibold text-red-600 mb-2">
-                  ⚠ Issues
-                </h3>
-                <pre className="text-sm whitespace-pre-wrap">
-                  {issues}
-                </pre>
-              </div>
-
-              {/* Improvements */}
-              <div className="bg-green-50 p-4 rounded-lg">
-                <h3 className="font-semibold text-green-600 mb-2">
-                  ✅ Improvements
-                </h3>
-                <pre className="text-sm whitespace-pre-wrap">
-                  {improvements}
-                </pre>
-              </div>
-
-              {/* Code Block */}
-              <div className="rounded-lg overflow-hidden">
-                <h3 className="font-semibold mb-2">💡 Refactored Code</h3>
-                <SyntaxHighlighter language="javascript">
-                  {review}
-                </SyntaxHighlighter>
-              </div>
-
-            </div>
+            <SyntaxHighlighter
+              language="javascript"
+              style={oneDark}
+              customStyle={{ borderRadius: "10px", padding: "20px" }}
+            >
+              {review}
+            </SyntaxHighlighter>
           ) : (
-            <p className="text-gray-400">
-              Review results will appear here.
-            </p>
+            <div className="text-gray-500">
+              결과가 여기에 표시됩니다
+            </div>
           )}
+
         </div>
 
       </div>
+
     </div>
   );
 }
