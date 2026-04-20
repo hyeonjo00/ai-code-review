@@ -2,7 +2,21 @@ import OpenAI from "openai";
 
 export async function POST(req: Request) {
   try {
-    const { code } = await req.json();
+    const { code } = (await req.json()) as { code?: string };
+
+    if (!code?.trim()) {
+      return Response.json(
+        { review: "Please provide code to review." },
+        { status: 400 },
+      );
+    }
+
+    if (!process.env.OPENAI_API_KEY) {
+      return Response.json(
+        { review: "OPENAI_API_KEY is not configured." },
+        { status: 500 },
+      );
+    }
 
     const client = new OpenAI({
       apiKey: process.env.OPENAI_API_KEY,
@@ -11,32 +25,38 @@ export async function POST(req: Request) {
     const response = await client.responses.create({
       model: "gpt-4.1-mini",
       input: `
-다음 코드를 리뷰해라:
+Review the following code and respond in Markdown.
 
+Focus on correctness, maintainability, readability, and practical improvements.
+
+Code:
+\`\`\`
 ${code}
+\`\`\`
 
-다음 형식으로 답해라:
+Use this structure:
 
-[문제점]
+## Issues
 - ...
 
-[개선점]
+## Improvements
 - ...
 
-[개선 코드]
+## Revised Code
+\`\`\`
 ...
+\`\`\`
 `,
     });
 
     return Response.json({
       review: response.output_text,
     });
-
-  } catch (error: any) {
+  } catch (error) {
     console.error(error);
 
-    return Response.json({
-      review: "Error: " + error.message,
-    });
+    const message = error instanceof Error ? error.message : "Unknown error";
+
+    return Response.json({ review: `Error: ${message}` }, { status: 500 });
   }
 }
